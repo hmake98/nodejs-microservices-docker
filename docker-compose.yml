@@ -1,0 +1,77 @@
+version: "3"
+
+services:
+  database:
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=master123
+      - POSTGRES_DB=postgres
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - backend
+  rabbitmq:
+    image: rabbitmq:3-management
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - backend
+  service1:
+    build: ./service-1
+    restart: on-failure
+    links: 
+      - rabbitmq
+    ports:
+      - 8001:8001
+    env_file:
+      - ./service-1/.env
+    networks:
+      - backend
+    command: ["./wait-for-it.sh", "database:5432", "rabbitmq:5672", "--", "node", "index.js"]
+    depends_on:
+      - database
+      - rabbitmq
+  service2:
+    build: ./service-2
+    restart: on-failure
+    links: 
+      - rabbitmq
+    ports:
+      - 8002:8002
+    env_file:
+      - ./service-2/.env
+    networks:
+      - backend
+    command: ["./wait-for-it.sh", "database:5432", "rabbitmq:5672", "--", "node", "index.js"]
+    depends_on:
+      - database
+      - rabbitmq
+  service3:
+    build: ./service-3
+    restart: on-failure
+    links: 
+      - rabbitmq
+    ports:
+      - 8003:8003
+    env_file:
+      - ./service-3/.env
+    networks:
+      - backend
+    command: ["./wait-for-it.sh", "database:5432", "rabbitmq:5672", "--", "node", "index.js"]
+    depends_on:
+      - database
+      - rabbitmq
+networks:
+  backend:
+    driver: bridge
+volumes:
+  pg_data:
+    driver: local
+  rabbit_data:
+    driver: local
